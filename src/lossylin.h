@@ -47,20 +47,17 @@ nlohmann::json readInputData()
 
 Eigen::MatrixXd initialiseContinousMatrix(const int maxnodes)
 {
-    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(maxnodes,maxnodes);
-    return res;
+    return Eigen::MatrixXd::Zero(maxnodes, maxnodes);
 }
 
 Eigen::MatrixXd initialiseDiscontinousMatrix(const int maxnodes)
 {
-    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(2*maxnodes-2, 2*maxnodes-2);
-    return res;
+    return Eigen::MatrixXd::Zero(2 * maxnodes - 2, 2 * maxnodes - 2);
 }
 
 Eigen::VectorXd initialiseRightHandSideTerm(const int maxnodes)
 {
-    Eigen::VectorXd res = Eigen::VectorXd::Zero(maxnodes);
-    return res;
+    return Eigen::VectorXd::Zero(maxnodes);
 }
 
 Eigen::MatrixXd buildConnectionMatrix(const int maxnodes)
@@ -71,7 +68,6 @@ Eigen::MatrixXd buildConnectionMatrix(const int maxnodes)
         for (int j = 0; j < 2 * maxnodes - 3; j++) 
         {
             if (i == j / 2 + 1) { res(i, j) = 1.0; }
-            else { res(i, j) = 0.0; }
         }
     }
     return res;
