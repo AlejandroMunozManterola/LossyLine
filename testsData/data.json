@@ -1,0 +1,17 @@
+{
+  "voltage": 2.0,
+  "resistivity": 1.0,
+  "conductivity": 0.5,
+  "coordinates": [
+    0.0,
+    2.0
+  ],
+  "nodes": 4,
+
+  "source": {
+    "magnitude": 1.0,
+    "type": "voltage",
+    "shape":  "gaussian"
+  }
+}
+
