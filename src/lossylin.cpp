@@ -48,7 +48,7 @@ Eigen::VectorXd buildVoltageVector(InputData values)
 
 ConnectionMatrix::ConnectionMatrix(int maxNodes)
 {
-    if (maxNodes < 1) {
+    if (maxNodes < 2) {
         throw std::runtime_error("Invalid size for building ConnectionMatrix");
     }
 
@@ -68,7 +68,7 @@ DiscontinousMatrix::DiscontinousMatrix(int maxNodes, InputData values)
 {
     double elementLength = calculateElementLength(values);
 
-    if (maxNodes < 1) {
+    if (maxNodes < 2) {
         throw std::runtime_error("Invalid size for building DiscontinousMatrix");
     }
     if (values.resistivity == 0) {
@@ -89,6 +89,7 @@ DiscontinousMatrix::DiscontinousMatrix(int maxNodes, InputData values)
         (*this)(j, j) = (1.0 / (values.resistivity * elementLength)) + values.conductivity * elementLength / 3.0;
     }
 }
+
 
 ContinousMatrix::ContinousMatrix(int maxNodes, InputData values)
 {
