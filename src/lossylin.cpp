@@ -64,5 +64,57 @@ ConnectionMatrix::ConnectionMatrix(int maxNodes)
 }
 
 
+DiscontinousMatrix::DiscontinousMatrix(int maxNodes, InputData values)
+{
+    double elementLength = calculateElementLength(values);
+
+    if (maxNodes < 1) {
+        throw std::runtime_error("Invalid size for building DiscontinousMatrix");
+    }
+    if (values.resistivity == 0) {
+        throw std::runtime_error("Invalid resistivity value (cannot be zero)");
+    }
+    if (elementLength == 0) {
+        throw std::runtime_error("Invalid element length value (cannot be zero)");
+    }
+
+    this->resize(2 * maxNodes - 2, 2 * maxNodes - 2);
+    this->setZero();
+
+    for (int i = 0; i < 2 * values.nodes - 4; i = i + 2) {
+        int j = i + 1;
+        (*this)(i, i) = (1.0 / (values.resistivity * elementLength)) + values.conductivity * elementLength / 3.0;
+        (*this)(i, j) = -(1.0 / (values.resistivity * elementLength)) + values.conductivity * elementLength / 6.0;
+        (*this)(j, i) = -(1.0 / (values.resistivity * elementLength)) + values.conductivity * elementLength / 6.0;
+        (*this)(j, j) = (1.0 / (values.resistivity * elementLength)) + values.conductivity * elementLength / 3.0;
+    }
+}
+
+ContinousMatrix::ContinousMatrix(int maxNodes, InputData values)
+{
+
+    if (maxNodes < 1) {
+        throw std::runtime_error("Invalid size for building ContinousMatrix");
+    }
+
+    ConnectionMatrix connection;
+    DiscontinousMatrix discontinous;
+
+    this->resize(maxNodes, maxNodes);
+    this->setZero();
+
+    for (int k = 0; k < values.nodes - 1; k++) {
+        for (int l = 0; l < values.nodes - 1; l++) {
+            double sum = 0;
+            for (int j = 0; j < 2 * values.nodes - 3; j++) {
+                for (int i = 0; i < 2 * values.nodes - 3; i++) {
+                    sum = sum + connection.coeff(k, i) * discontinous.coeff(i, j) * connection.coeff(l, j);
+                }
+            }
+            (*this)(k, l) = sum;
+        }
+    }
+}
+
 
 }

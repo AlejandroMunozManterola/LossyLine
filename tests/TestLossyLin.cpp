@@ -9,7 +9,7 @@ typedef vector<double> Coordinates;
 
 TEST(lossylin, readInputData)
 {
-    ASSERT_NO_THROW( InputData( readInputData("./testsData/data.json") ) );
+    ASSERT_NO_THROW(InputData(readInputData("./testsData/data.json")));
     
     InputData values(readInputData("./testsData/data.json"));
     
@@ -37,13 +37,21 @@ TEST(lossylin, ConnectionMatrix_ctor)
     EXPECT_EQ(1.0, connection.coeff(1, 0));
 }
 
-//TEST(lossylin, DiscontinuousMatrix_ctor)
-//    Eigen::MatrixXd discontinousMatrix = buildDiscontinousMatrix(maxNodes);
-//    ASSERT_TRUE(&discontinousMatrix != nullptr);
-//    EXPECT_NEAR(2.083, discontinousMatrix.coeff(0, 0), 0.005);
-//    EXPECT_NEAR(-1.958, discontinousMatrix.coeff(0, 1), 0.005);
-//
-//}
+TEST(lossylin, DiscontinuousMatrix_ctor)
+{
+    InputData values(readInputData("./testsData/data.json"));
+    
+    //for (auto n = 0; n < 10; n++) {
+    //    ASSERT_NO_THROW(DiscontinousMatrix(n, values));
+    //}
+    
+    auto maxNodes = 5;
+    DiscontinousMatrix discontinous(maxNodes, values);
+
+    EXPECT_NEAR(2.083, discontinous.coeff(0, 0), 0.005);
+    EXPECT_NEAR(-1.958, discontinous.coeff(0, 1), 0.005);
+
+}
 
 //TEST(lossylin, DISABLED_FetchVoltageValue_Test)
 //{
