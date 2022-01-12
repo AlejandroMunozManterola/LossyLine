@@ -6,7 +6,8 @@ using namespace std;
 
 typedef vector<double> Coordinates;
 
-const int maxnodes = 30;
+const int maxNodes = 30;
+
 TEST(lossylin, readInputData)
 {
     auto j = FEM::readInputData();
@@ -26,6 +27,7 @@ TEST(lossylin, readInputData)
 TEST(lossylin, readSource)
 {
     auto j = FEM::readInputData();
+    ASSERT_TRUE(j != nullptr);
 
     auto jSource = j.at("source");
     ASSERT_TRUE(jSource != nullptr);
@@ -33,39 +35,28 @@ TEST(lossylin, readSource)
     FEM::Source source;
     ASSERT_NO_THROW(source = FEM::Source(jSource));
 
+    FEM::Values values(j);
+    ASSERT_NO_THROW(values = FEM::Values(j));
+
+    EXPECT_EQ(values.voltage, 2.0);
+
     //funcionQueUsaFuente(source);
-}
-
-TEST(lossylin, initialiseMatrixesAndRightHandSideTerm)
-{
-    Eigen::MatrixXd continousMatrix = FEM::initialiseContinousMatrix(maxnodes);
-    ASSERT_TRUE(&continousMatrix != nullptr);
-    EXPECT_EQ(maxnodes, continousMatrix.rows());
-    EXPECT_EQ(0.0, continousMatrix.coeff(0,0));
-    EXPECT_EQ(0.0, continousMatrix.coeff(continousMatrix.rows()-1,continousMatrix.cols()-1));
-
-    Eigen::MatrixXd discontinousMatrix = FEM::initialiseDiscontinousMatrix(maxnodes);
-    ASSERT_TRUE(&discontinousMatrix != nullptr);
-    EXPECT_EQ(2*maxnodes-2, discontinousMatrix.rows());
-    EXPECT_EQ(0.0, discontinousMatrix.coeff(0, 0));
-    EXPECT_EQ(0.0, discontinousMatrix.coeff(discontinousMatrix.rows()-1, discontinousMatrix.cols()-1));
-
-    Eigen::VectorXd rightHandSideTerm = FEM::initialiseRightHandSideTerm(maxnodes);
-    ASSERT_TRUE(&rightHandSideTerm != nullptr);
-    EXPECT_EQ(maxnodes, rightHandSideTerm.size());
-    EXPECT_EQ(0.0, rightHandSideTerm.coeff(0));
-    EXPECT_EQ(0.0, rightHandSideTerm.coeff(rightHandSideTerm.rows()-1));
-
 }
 
 TEST(lossylin, buildMatrixesAndRightHandSideTerm)
 {
-    Eigen::MatrixXd connectionMatrix = FEM::buildConnectionMatrix(maxnodes);
+    Eigen::MatrixXd connectionMatrix = FEM::buildConnectionMatrix(maxNodes);
     ASSERT_TRUE(&connectionMatrix != nullptr);
-    EXPECT_EQ(maxnodes, connectionMatrix.rows());
-    EXPECT_EQ(2 * maxnodes - 2, connectionMatrix.cols());
+    EXPECT_EQ(maxNodes, connectionMatrix.rows());
+    EXPECT_EQ(2 * maxNodes - 2, connectionMatrix.cols());
     EXPECT_EQ(0.0, connectionMatrix.coeff(1, 15));
     EXPECT_EQ(1.0, connectionMatrix.coeff(1, 0));
+
+    Eigen::MatrixXd discontinousMatrix = FEM::buildDiscontinousMatrix(maxNodes);
+    ASSERT_TRUE(&discontinousMatrix != nullptr);
+    EXPECT_NEAR(2.083, discontinousMatrix.coeff(0, 0), 0.005);
+    EXPECT_NEAR(-1.958, discontinousMatrix.coeff(0, 1), 0.005);
+
 }
 
 

@@ -11,6 +11,8 @@ namespace FEM {
 
 using namespace std;
 
+typedef vector<double> Coordinates;
+
 struct Source {
     Source() = default;
 
@@ -32,6 +34,31 @@ struct Source {
     string shape;
 };
 
+struct Values {
+    Values() = default;
+
+    Values(nlohmann::json j)
+    {
+        if (j.at("voltage") == nullptr ||
+            j.at("resistivity") == nullptr ||
+            j.at("conductivity") == nullptr ||
+            j.at("coordinates") == nullptr ||
+            j.at("nodes") == nullptr) {
+            throw runtime_error("Invalid json object in Values ctor.");
+        }
+        voltage = j.at("voltage").get<double>();
+        resistivity = j.at("resistivity").get<double>();
+        conductivity = j.at("conductivity").get<double>();
+        coordinates = j.at("coordinates").get<vector<double>>();
+        nodes = j.at("nodes").get<int>();
+    }
+    double voltage;
+    double resistivity;
+    double conductivity;
+    vector<double> coordinates;
+    int nodes;
+};
+
 nlohmann::json readInputData() 
 {
     ifstream jfile("./testsData/data.json");
@@ -45,31 +72,87 @@ nlohmann::json readInputData()
     return j;
 }
 
-Eigen::MatrixXd initialiseContinousMatrix(const int maxnodes)
+Eigen::MatrixXd buildConnectionMatrix(const int maxNodes)
 {
-    return Eigen::MatrixXd::Zero(maxnodes, maxnodes);
-}
-
-Eigen::MatrixXd initialiseDiscontinousMatrix(const int maxnodes)
-{
-    return Eigen::MatrixXd::Zero(2 * maxnodes - 2, 2 * maxnodes - 2);
-}
-
-Eigen::VectorXd initialiseRightHandSideTerm(const int maxnodes)
-{
-    return Eigen::VectorXd::Zero(maxnodes);
-}
-
-Eigen::MatrixXd buildConnectionMatrix(const int maxnodes)
-{
-    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(maxnodes, 2 * maxnodes - 2);
-    for (int i = 0; i < maxnodes-1; i++) 
-    {
-        for (int j = 0; j < 2 * maxnodes - 3; j++) 
-        {
-            if (i == j / 2 + 1) { res(i, j) = 1.0; }
+    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(maxNodes, 2 * maxNodes - 2);
+    for (int i = 0; i < maxNodes-1; i++) {
+        for (int j = 0; j < 2 * maxNodes - 3; j++) {
+            if (i == j / 2 + 1) { 
+                res(i, j) = 1.0; 
+            }
         }
     }
+    return res;
+}
+
+
+double calculateElementLength() 
+{
+    auto j = readInputData();
+    vector<double> jCoords = j.at("coordinates"); auto jNodes = j.at("nodes");
+    double res = (jCoords[1] - jCoords[0]) / (jNodes.get<int>() - 1);   
+    return res;
+}
+
+Eigen::VectorXd buildVoltageVector() 
+{
+    auto j = readInputData(); Values values(j);
+    Eigen::VectorXd res = Eigen::VectorXd::Zero(values.nodes);
+    res(values.nodes) = values.voltage;
+    return res;
+
+}
+
+Eigen::MatrixXd buildDiscontinousMatrix(const int maxNodes)
+{
+    auto j = readInputData();
+    auto jResist = j.at("resistivity"); auto jConduct = j.at("conductivity"); auto jNodes = j.at("nodes");
+
+    double elementLength = calculateElementLength();
+
+    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(2 * maxNodes - 2, 2 * maxNodes - 2);
+
+    for (int i = 0; i < 2 * jNodes.get<int>() - 4; i = i + 2) {
+        int j = i + 1;
+        res(i, i) = (1.0 / (jResist.get<double>() * elementLength)) + jConduct.get<double>() * elementLength / 3.0;
+        res(i, j) = -(1.0 / (jResist.get<double>() * elementLength)) + jConduct.get<double>() * elementLength / 6.0; 
+        res(j, i) = -(1.0 / (jResist.get<double>() * elementLength)) + jConduct.get<double>() * elementLength / 6.0; 
+        res(j, j) = (1.0 / (jResist.get<double>() * elementLength)) + jConduct.get<double>() * elementLength / 3.0;
+    }
+    return res;
+}
+
+Eigen::MatrixXd buildContinousMatrix(const int maxNodes, Eigen::MatrixXd discontinousMatrix, Eigen::MatrixXd connectionMatrix)
+{
+    auto j = readInputData();
+    auto jNodes = j.at("nodes");
+    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(maxNodes, maxNodes);
+
+    for (int k = 0; k < jNodes.get<int>() - 1; k++) {
+        for (int l = 0; l < jNodes.get<int>() - 1; l++) {
+            double sum = 0;
+            for (int j = 0; j < 2 * jNodes.get<int>() - 3; j++) {
+                for (int i = 0; i < 2 * jNodes.get<int>() - 3; i++) {
+                    sum = sum + connectionMatrix.coeff(k, i) * discontinousMatrix.coeff(i, j) * connectionMatrix.coeff(l, j);
+                }
+            }
+            res(k, l) = sum;
+        }
+    }
+    return res;
+}   
+
+Eigen::VectorXd buildRightHandSideTerm(const int maxNodes, Eigen::MatrixXd continousMatrix, Eigen::VectorXd voltageVector) 
+{
+    
+    auto j = readInputData();
+    auto jNodes = j.at("nodes");
+    Eigen::VectorXd res = Eigen::VectorXd::Zero(maxNodes);
+
+    for (int i = 0; i < jNodes.get<int>() - 2; i++) {
+        res(i) = -1.0 * continousMatrix.coeff(i, jNodes.get<int>()-1) * voltageVector.coeff(jNodes.get<int>()-1);
+    }
+
     return res;
 }
 
