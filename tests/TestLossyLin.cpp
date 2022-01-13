@@ -24,33 +24,64 @@ TEST(lossylin, readInputData)
 
 TEST(lossylin, ConnectionMatrix_ctor)
 {
-    for (auto n = 0; n < 10; n++) {
-        ASSERT_NO_THROW(ConnectionMatrix(n));
+
+    for (auto n = 2; n < 10; n++) {
+        ASSERT_NO_THROW(ConnectionMatrix conn(n));
     }
 
-    auto maxNodes = 5;
-    ConnectionMatrix connection(maxNodes);
+    InputData values(readInputData("./testsData/data.json"));
+    ConnectionMatrix connection(values.nodes);
 
-    EXPECT_EQ(maxNodes, connection.rows());
-    EXPECT_EQ(2 * maxNodes - 2, connection.cols());
-    EXPECT_EQ(0.0, connection.coeff(1, 5));
-    EXPECT_EQ(1.0, connection.coeff(1, 0));
+    EXPECT_EQ(values.nodes, connection.rows());
+    EXPECT_EQ(2 * values.nodes - 2, connection.cols());
+    EXPECT_EQ(0.0, connection.coeff(0, connection.rows()));
+    EXPECT_EQ(1.0, connection.coeff(2, 3));
 }
 
 TEST(lossylin, DiscontinuousMatrix_ctor)
 {
     InputData values(readInputData("./testsData/data.json"));
     
-    //for (auto n = 0; n < 10; n++) {
-    //    ASSERT_NO_THROW(DiscontinousMatrix(n, values));
-    //}
-    
-    auto maxNodes = 5;
-    DiscontinousMatrix discontinous(maxNodes, values);
+    ASSERT_NO_THROW(DiscontinousMatrix disc(values));
+
+    DiscontinousMatrix discontinous(values);
 
     EXPECT_NEAR(2.083, discontinous.coeff(0, 0), 0.005);
     EXPECT_NEAR(-1.958, discontinous.coeff(0, 1), 0.005);
+    EXPECT_NEAR(2.083, discontinous.coeff(discontinous.rows() - 1, discontinous.cols() - 1),0.05);
 
+}
+
+TEST(lossylin, ContinousMatrix_ctor)
+{
+    InputData values(readInputData("./testsData/data.json"));
+    ConnectionMatrix connection(values.nodes);
+    DiscontinousMatrix discontinous(values);
+
+    ASSERT_NO_THROW(ContinousMatrix disc(values.nodes, connection, discontinous));
+
+    ContinousMatrix continous(values.nodes, connection, discontinous);
+
+    EXPECT_NEAR(2.083, continous.coeff(0, 0),0.05);
+    EXPECT_NEAR(-1.953, continous.coeff(0, 1),0.05);
+    EXPECT_NEAR(4.166, continous.coeff(1, 1), 0.05);
+    EXPECT_NEAR(2.083, continous.coeff(continous.rows()-1,continous.cols()-1), 0.05);
+
+}
+
+TEST(lossylin, transposeVoltageToRightSide)
+{
+    InputData values(readInputData("./testsData/data.json"));
+    ConnectionMatrix connection(values.nodes);
+    DiscontinousMatrix discontinous(values);
+    ContinousMatrix continous(values.nodes, connection, discontinous);
+    Eigen::VectorXd voltageVector = buildVoltageVector(values.nodes, values.voltage);
+    Eigen::VectorXd rightHandSide = transposeVoltageToRightSide(voltageVector, continous);
+
+    ASSERT_EQ(voltageVector.rows(), continous.rows());
+    EXPECT_EQ(0.0, rightHandSide.coeff(0));
+    EXPECT_NEAR(-1.0 * values.voltage * -1.953, rightHandSide.coeff(rightHandSide.rows() - 2), 0.05);
+    EXPECT_NEAR(-1.0 * values.voltage * 2.083, rightHandSide.coeff(rightHandSide.rows() - 1), 0.05);
 }
 
 //TEST(lossylin, DISABLED_FetchVoltageValue_Test)

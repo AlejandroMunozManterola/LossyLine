@@ -24,40 +24,29 @@ struct InputData {
     int nodes = 0;
 };
 
-nlohmann::json readInputData(std::string filename);
-double calculateElementLength(InputData values);
-Eigen::VectorXd buildVoltageVector(InputData values);
 
 class ConnectionMatrix : public Eigen::MatrixXd {
 public:
     ConnectionMatrix() = default;
-    ConnectionMatrix(int maxNodes);
+    ConnectionMatrix(int nodes);
 };
 
 class DiscontinousMatrix : public Eigen::MatrixXd {
 public:
     DiscontinousMatrix() = default;
-    DiscontinousMatrix(int maxNodes, InputData values);
+    DiscontinousMatrix(InputData values);
 };
 
 class ContinousMatrix : public Eigen::MatrixXd {
 public:
     ContinousMatrix() = default;
-    ContinousMatrix(int maxNodes, InputData values);
+    ContinousMatrix(int n, ConnectionMatrix connection, DiscontinousMatrix discontinous);
 };
 
+
+nlohmann::json readInputData(std::string filename);
+double calculateElementLength(int n, Coordinates coordinates);
+Eigen::VectorXd buildVoltageVector(int n, double voltage);
+Eigen::MatrixXd transposeVoltageToRightSide(Eigen::VectorXd voltageVector, ContinousMatrix continous);
+
 };
-
-
-//Eigen::VectorXd buildRightHandSideTerm(const int maxNodes, Eigen::MatrixXd continousMatrix, Eigen::VectorXd voltageVector) 
-//{
-//    
-//    auto j = readInputData(); InputData values(j);
-//    Eigen::VectorXd res = Eigen::VectorXd::Zero(maxNodes);
-//
-//    for (int i = 0; i < values.nodes - 2; i++) {
-//        res(i) = -1.0 * continousMatrix.coeff(i, values.nodes-1) * voltageVector.coeff(values.nodes-1);
-//    }
-//
-//    return res;
-//}
