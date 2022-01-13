@@ -45,10 +45,17 @@ public:
 
 
 nlohmann::json readInputData(std::string filename);
+
 double calculateElementLength(int n, Coordinates coordinates);
+
 Eigen::VectorXd buildPositionVector(int n, Coordinates coordinates);
 Eigen::VectorXd buildVoltageVector(int n, double voltage);
+Eigen::VectorXd calculateForwardElimination(ContinousMatrix continous, Eigen::MatrixXd rightHandSide);
+Eigen::VectorXd calculateBackSubstitution(ContinousMatrix continous, Eigen::VectorXd voltageVector);
+
 Eigen::MatrixXd calculateRightHandSide(Eigen::VectorXd voltageVector, ContinousMatrix continous);
 Eigen::MatrixXd calculateProblemSolution(InputData values, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector);
+Eigen::MatrixXd calculateCholeskyDecomposition(ContinousMatrix continous);
+
 
 };

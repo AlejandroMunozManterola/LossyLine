@@ -60,21 +60,58 @@ Eigen::MatrixXd calculateRightHandSide(Eigen::VectorXd voltageVector, ContinousM
     return res;
 }
 
+Eigen::MatrixXd calculateCholeskyDecomposition(ContinousMatrix continous) 
+{
+    return continous.llt().matrixL();
+}
+
+Eigen::VectorXd calculateForwardElimination(ContinousMatrix continous, Eigen::MatrixXd rightHandSide) 
+{
+    Eigen::VectorXd res = Eigen::VectorXd::Zero(continous.rows());
+    res(0) = rightHandSide.coeff(0) / continous.coeff(0, 0);
+    for (int i = 1; i < res.rows(); i++) {
+        res(i) = rightHandSide.coeff(i);
+        for (int j = 0; j < i - 1; j++) {
+            res(i) = res.coeff(i) - continous.coeff(i, j) * res.coeff(j);
+        }
+        res(i) = res.coeff(i) / continous.coeff(i, i);
+    }
+    return res;
+}
+
+Eigen::VectorXd calculateBackSubstitution(ContinousMatrix continous, Eigen::VectorXd voltageVector) 
+{
+    Eigen::VectorXd rightHandSide = calculateRightHandSide(voltageVector, continous);
+    Eigen::VectorXd res = Eigen::VectorXd::Zero(continous.rows());
+
+    res(res.rows() - 1) = rightHandSide.coeff(rightHandSide.rows()) / continous.coeff(continous.rows(), continous.rows());
+    for (int i = res.rows() - 2; i < 0; i--) {
+        res(i) = rightHandSide.coeff(i);
+        for (int j = i + 1; res.rows() - 1; j++) {
+            res(i) = res.coeff(i) - continous.coeff(i, j) * res.coeff(j);
+        }
+        res(i) = res.coeff(i) / continous.coeff(i, i);
+    }
+    return res;
+}
+
 double calculateApproximateInterpolatedSolution(double z, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector)
 {
-    int interval = 0; double res;
-    for (int i = 1; i < positionVector.rows()+1; i++) {
+    int interval = 0;
+    for (int i = 1; i < positionVector.rows(); i++) {
         if (positionVector.coeff(i-1) <= z && positionVector.coeff(i) >= z) {
             interval = i;
+            break;
         }
     }
     if (interval == 0) {
         throw std::runtime_error("Invalid value for interval.");
     }
     else {
-        res = (voltageVector.coeff(interval + 1)*(z-positionVector.coeff(interval)) + voltageVector.coeff(interval) * (positionVector.coeff(interval + 1) - z)) / (positionVector.coeff(interval + 1) - positionVector.coeff(interval));
+        return (voltageVector.coeff(interval)*(z-positionVector.coeff(interval-1)) 
+            + voltageVector.coeff(interval-1) * (positionVector.coeff(interval) - z)) 
+            / (positionVector.coeff(interval) - positionVector.coeff(interval-1));
     } 
-    return res;
 }
 
 Eigen::MatrixXd calculateProblemSolution(InputData values, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector) 

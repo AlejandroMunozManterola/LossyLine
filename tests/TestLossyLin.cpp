@@ -97,11 +97,17 @@ TEST(lossylin, calculateRightHandSide)
     EXPECT_NEAR(-1.0 * values.voltage * 2.083, rightHandSide.coeff(rightHandSide.rows() - 1), 0.05);
 }
 
-TEST(lossylin, FetchVoltageValue)
+TEST(lossylin, calculateProblemSolution)
 {
     InputData values(readInputData("./testsData/data.json"));
-    Eigen::MatrixXd solution = calculateProblemSolution(values, buildVoltageVector(values.nodes, values.voltage), buildPositionVector(values.nodes, values.coordinates));
+    Eigen::VectorXd voltageVector = buildVoltageVector(values.nodes, values.voltage);
+    Eigen::VectorXd positionVector = buildPositionVector(values.nodes, values.coordinates);
+    Eigen::MatrixXd solution = calculateProblemSolution(values, voltageVector, positionVector);
  
-    EXPECT_NEAR(0.265802, solution.coeff(0, 1), 0.05);
-    EXPECT_NEAR(1.0, solution.coeff(solution.rows()-1, 1), 0.05);
+    EXPECT_EQ(0.0, solution.coeff(0, 0));
+    EXPECT_EQ(2.0, solution.coeff(solution.rows() - 1, 0));
+    EXPECT_NEAR(0.262344, solution.coeff(0, 1), 0.05);
+    EXPECT_NEAR(1.0, solution.coeff(solution.rows() - 1, 1), 0.05);
+    EXPECT_NEAR(0.265802, solution.coeff(0, 2), 0.05);
+    EXPECT_NEAR(1.0, solution.coeff(solution.rows()-1, 2), 0.05);
 }
