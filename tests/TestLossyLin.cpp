@@ -22,6 +22,20 @@ TEST(lossylin, readInputData)
     EXPECT_EQ(values.voltage, 2.0);
 }
 
+TEST(lossylin, positionVectorFunction) {
+
+    InputData values(readInputData("./testsData/data.json"));
+
+    Eigen::VectorXd positionVector = buildPositionVector(values.nodes, values.coordinates);
+
+    EXPECT_EQ(0.0, positionVector.coeff(0));
+    EXPECT_EQ(0.5, positionVector.coeff(1));
+    EXPECT_EQ(1.0, positionVector.coeff(2));
+    EXPECT_EQ(1.5, positionVector.coeff(3));
+    EXPECT_EQ(2.0, positionVector.coeff(positionVector.rows()-1));
+
+}
+
 TEST(lossylin, ConnectionMatrix_ctor)
 {
 
@@ -69,25 +83,25 @@ TEST(lossylin, ContinousMatrix_ctor)
 
 }
 
-TEST(lossylin, transposeVoltageToRightSide)
+TEST(lossylin, calculateRightHandSide)
 {
     InputData values(readInputData("./testsData/data.json"));
     ConnectionMatrix connection(values.nodes);
     DiscontinousMatrix discontinous(values);
     ContinousMatrix continous(values.nodes, connection, discontinous);
-    Eigen::VectorXd voltageVector = buildVoltageVector(values.nodes, values.voltage);
-    Eigen::VectorXd rightHandSide = transposeVoltageToRightSide(voltageVector, continous);
+    Eigen::VectorXd rightHandSide = calculateRightHandSide(buildVoltageVector(values.nodes, values.voltage), continous);
 
-    ASSERT_EQ(voltageVector.rows(), continous.rows());
+    ASSERT_EQ(rightHandSide.rows(), continous.rows());
     EXPECT_EQ(0.0, rightHandSide.coeff(0));
     EXPECT_NEAR(-1.0 * values.voltage * -1.953, rightHandSide.coeff(rightHandSide.rows() - 2), 0.05);
     EXPECT_NEAR(-1.0 * values.voltage * 2.083, rightHandSide.coeff(rightHandSide.rows() - 1), 0.05);
 }
 
-//TEST(lossylin, DISABLED_FetchVoltageValue_Test)
-//{
-//    EXPECT_NEAR(FetchVoltageValue(0.0),0.265802,0.05);
-//    EXPECT_NEAR(FetchVoltageValue(0.2),0.271136,0.05);
-//    EXPECT_NEAR(FetchVoltageValue(1.90),0.908441,0.05);
-//    EXPECT_NEAR(FetchVoltageValue(2.0),1.0,0.05);
-//}
+TEST(lossylin, FetchVoltageValue)
+{
+    InputData values(readInputData("./testsData/data.json"));
+    Eigen::MatrixXd solution = calculateProblemSolution(values, buildVoltageVector(values.nodes, values.voltage), buildPositionVector(values.nodes, values.coordinates));
+ 
+    EXPECT_NEAR(0.265802, solution.coeff(0, 1), 0.05);
+    EXPECT_NEAR(1.0, solution.coeff(solution.rows()-1, 1), 0.05);
+}

@@ -38,6 +38,12 @@ double calculateElementLength(int n, Coordinates coordinates)
     return (coordinates[1] - coordinates[0]) / (n - 1);
 }
 
+Eigen::VectorXd buildPositionVector(int n, Coordinates coordinates) 
+{
+    Eigen::VectorXd res = Eigen::VectorXd::Zero(n);
+    return res.setLinSpaced(n, coordinates[0], coordinates[1]);
+}
+
 Eigen::VectorXd buildVoltageVector(int n, double voltage)
 {
     Eigen::VectorXd res = Eigen::VectorXd::Zero(n);
@@ -45,13 +51,44 @@ Eigen::VectorXd buildVoltageVector(int n, double voltage)
     return res;
 }
 
-Eigen::MatrixXd transposeVoltageToRightSide(Eigen::VectorXd voltageVector, ContinousMatrix continous)
+Eigen::MatrixXd calculateRightHandSide(Eigen::VectorXd voltageVector, ContinousMatrix continous)
 {
     Eigen::VectorXd res = Eigen::VectorXd::Zero(voltageVector.rows());    
     for (int i = 0; i < voltageVector.rows(); i++) {
         res(i) = -1.0 * continous.coeff(i, voltageVector.rows() - 1) * voltageVector(voltageVector.rows() - 1);
     }
-    
+    return res;
+}
+
+double calculateApproximateInterpolatedSolution(double z, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector)
+{
+    int interval = 0; double res;
+    for (int i = 1; i < positionVector.rows()+1; i++) {
+        if (positionVector.coeff(i-1) <= z && positionVector.coeff(i) >= z) {
+            interval = i;
+        }
+    }
+    if (interval == 0) {
+        throw std::runtime_error("Invalid value for interval.");
+    }
+    else {
+        res = (voltageVector.coeff(interval + 1)*(z-positionVector.coeff(interval)) + voltageVector.coeff(interval) * (positionVector.coeff(interval + 1) - z)) / (positionVector.coeff(interval + 1) - positionVector.coeff(interval));
+    } 
+    return res;
+}
+
+Eigen::MatrixXd calculateProblemSolution(InputData values, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector) 
+{
+     double p = sqrt(values.resistivity * values.conductivity); double dn = exp(p * values.coordinates[1]) + exp(-1.0 * p * values.coordinates[1]); int nbits = 100;
+     Eigen::MatrixXd res = Eigen::MatrixXd::Zero(nbits+1, 4);
+
+    for (int i = 0; i <= nbits; i++) {
+        res(i, 0) = i * values.coordinates[1] / nbits;
+        res(i, 1) = calculateApproximateInterpolatedSolution(res.coeff(i, 0), voltageVector, positionVector);
+        res(i, 2) = voltageVector(values.nodes - 1) * (exp(p * res.coeff(i, 0)) + exp(-1.0 * p * res.coeff(i, 0))) / dn;
+        res(i, 3) = (res.coeff(i, 1) - res.coeff(i, 2)) / res.coeff(i, 2) * 100;
+    }
+
     return res;
 }
 

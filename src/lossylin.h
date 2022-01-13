@@ -46,7 +46,9 @@ public:
 
 nlohmann::json readInputData(std::string filename);
 double calculateElementLength(int n, Coordinates coordinates);
+Eigen::VectorXd buildPositionVector(int n, Coordinates coordinates);
 Eigen::VectorXd buildVoltageVector(int n, double voltage);
-Eigen::MatrixXd transposeVoltageToRightSide(Eigen::VectorXd voltageVector, ContinousMatrix continous);
+Eigen::MatrixXd calculateRightHandSide(Eigen::VectorXd voltageVector, ContinousMatrix continous);
+Eigen::MatrixXd calculateProblemSolution(InputData values, Eigen::VectorXd voltageVector, Eigen::VectorXd positionVector);
 
 };
